@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist as GeistFont, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
+const geistSans = GeistFont({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+  subsets: ["latin"],});
+
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -19,16 +19,22 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning={true} // Add this to suppress hydration warnings
       >
         {children}
       </body>
     </html>
   );
 }
+
+function Geist(arg0: { variable: string; subsets: string[]; }) {
+  throw new Error("Function not implemented.");
+}
+

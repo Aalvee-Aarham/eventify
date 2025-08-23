@@ -36,7 +36,7 @@ const Navbar: React.FC = () => {
             </Link>
           </li>
           <li>
-            <Link href="#signup">
+            <Link href="/create-account">
               <span className="px-4 py-2 bg-transparent border-2 border-yellow-300 text-yellow-300 rounded-full hover:bg-yellow-300 hover:text-gray-800 transition-all duration-300">
                 Sign Up
               </span>
