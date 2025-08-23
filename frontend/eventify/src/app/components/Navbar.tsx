@@ -1,4 +1,4 @@
-import Link from 'next/link'
+import Link from 'next/link';
 
 const Navbar: React.FC = () => {
   return (
@@ -9,13 +9,18 @@ const Navbar: React.FC = () => {
         </div>
         <ul className="flex space-x-8 font-semibold">
           <li>
-            <Link href="#home" className="hover:text-yellow-300 transition-all duration-300">
+            <Link href="/" className="hover:text-yellow-300 transition-all duration-300">
               Home
             </Link>
           </li>
           <li>
-            <Link href="#events" className="hover:text-yellow-300 transition-all duration-300">
+            <Link href="/events" className="hover:text-yellow-300 transition-all duration-300">
               Events
+            </Link>
+          </li>
+          <li>
+            <Link href="/trending-events" className="hover:text-yellow-300 transition-all duration-300">
+              Trending Events
             </Link>
           </li>
           <li>
@@ -40,7 +45,7 @@ const Navbar: React.FC = () => {
         </ul>
       </div>
     </nav>
-  )
-}
+  );
+};
 
-export default Navbar
+export default Navbar;
