@@ -7,11 +7,13 @@ import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore'; // Firestor
 import ImageKit from 'imagekit'; // For image uploading to ImageKit
 import { toast, ToastContainer } from 'react-toastify'; // Ensure proper import
 import 'react-toastify/dist/ReactToastify.css'; // Import CSS for Toast
+import { useRouter } from 'next/navigation'; // Import useRouter from next/navigation
 
 const RegistrationPage: React.FC = () => {
   const [name, setName] = useState<string>('');
   const [role, setRole] = useState<string>('student');
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
+  const router = useRouter(); // Use useRouter here
   const [interests, setInterests] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [user, setUser] = useState<any>(null); // To store current user info
@@ -22,7 +24,47 @@ const RegistrationPage: React.FC = () => {
     privateKey: 'private_q/2e6BpjVW7FS5rLban7dS6xK3E=',
     urlEndpoint: 'https://ik.imagekit.io/aalvee', // Your ImageKit endpoint
   });
+const handleRegistrationSubmit = async () => {
+  // Validation check for all fields
+  if (!name || !role || !profilePicture) {
+    toast.error('Please fill in all required fields and select your role');
+    return;
+  }
 
+  if (!user) {
+    toast.error('No user found'); // Notify error if user is not found
+    console.log('No user logged in');
+    return;
+  }
+
+  setIsLoading(true);
+  toast.info('Saving information, please wait...'); // Show loading toast
+
+  try {
+    const profilePicUrl = await uploadProfilePicture();
+    console.log('Profile picture URL:', profilePicUrl);
+
+    const userDocRef = doc(db, 'users', user.uid);
+    await setDoc(userDocRef, {
+      name,
+      profilePicture: profilePicUrl,
+      role,
+      interests,
+      accountCreationDate: Timestamp.now(),
+    });
+
+    toast.success('Registration completed successfully!');
+    console.log('User data saved to Firestore');
+
+    router.push('/'); // Redirect to the home page
+
+  } catch (error: any) {
+    toast.error(`Error: ${error.message}`);
+    console.error('Error saving user data:', error);
+  } finally {
+    setIsLoading(false);
+  }
+};
   // Set client flag after mount to prevent hydration issues
   useEffect(() => {
     setIsClient(true);
@@ -96,44 +138,9 @@ const RegistrationPage: React.FC = () => {
   };
 
   // Handle registration submission
-  const handleRegistrationSubmit = async () => {
-    // Validation check for all fields
-    if (!name || !role || !profilePicture || interests.length === 0) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
 
-    if (!user) {
-      toast.error('No user found'); // Notify error if user is not found
-      console.log('No user logged in');
-      return;
-    }
 
-    setIsLoading(true);
-    toast.info('Saving information, please wait...'); // Show loading toast
 
-    try {
-      const profilePicUrl = await uploadProfilePicture();
-      console.log('Profile picture URL:', profilePicUrl);
-
-      const userDocRef = doc(db, 'users', user.uid);
-      await setDoc(userDocRef, {
-        name,
-        profilePicture: profilePicUrl,
-        role,
-        interests,
-        accountCreationDate: Timestamp.now(),
-      });
-
-      toast.success('Registration completed successfully!');
-      console.log('User data saved to Firestore');
-    } catch (error: any) {
-      toast.error(`Error: ${error.message}`);
-      console.error('Error saving user data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Update interests if role is student
   const handleInterestChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -176,18 +183,20 @@ const RegistrationPage: React.FC = () => {
           className="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
 
-        <div className="mb-4">
-          <label className="block text-gray-600 mb-2">Role</label>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-          >
-            <option value="admin">Admin</option>
-            <option value="club-organizing">Club Organizing</option>
-            <option value="student">Student</option>
-          </select>
-        </div>
+    <div className="mb-4">
+      <label className="block text-gray-600 mb-2">Role</label>
+      <select
+        value={role}
+        onChange={(e) => setRole(e.target.value)}
+        className={`w-full p-3 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+          role === '' ? 'text-gray-500' : '' // Apply gray text if no option is selected
+        }`}
+      >
+        <option value="">Select Role</option> {/* Default empty option */}
+        <option value="admin">Admin</option>
+        <option value="student">Student</option>
+      </select>
+    </div>
 
         <div className="mb-4">
   <label className="block text-gray-600 mb-2">Profile Picture</label>
