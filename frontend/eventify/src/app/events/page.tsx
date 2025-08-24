@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from "react";
 import gsap from "gsap";
@@ -6,85 +6,29 @@ import Link from "next/link";
 import { Calendar, MapPin, Clock, Users, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import Navbar from "../components/Navbar";
 import EventCard from "./EventCard";
-
-// Sample events data
-const eventsData = [
-  {
-    id: 1,
-    title: "Cultural Fest",
-    type: "cultural",
-    imageUrl:
-      "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg",
-    date: "2025-08-30",
-    time: "2:00 PM",
-    location: "City Hall",
-    description: "A celebration of culture and traditions.",
-  },
-  {
-    id: 2,
-    title: "Sports Championship",
-    type: "sports",
-    imageUrl:
-      "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg",
-    date: "2025-09-05",
-    time: "10:00 AM",
-    location: "Stadium",
-    description: "A thrilling sports competition with top athletes.",
-  },
-  {
-    id: 3,
-    title: "IDC Summit",
-    type: "idc",
-    imageUrl:
-      "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg",
-    date: "2025-09-12",
-    time: "1:00 PM",
-    location: "Convention Center",
-    description: "An interactive session for IT professionals.",
-  },
-  {
-    id: 4,
-    title: "IAPC Meeting",
-    type: "iapc",
-    imageUrl:
-      "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg",
-    date: "2025-08-25",
-    time: "3:00 PM",
-    location: "Main Hall",
-    description: "IAPC's annual strategic meeting.",
-  },
-  {
-    id: 5,
-    title: "CDC Conference",
-    type: "cdc",
-    imageUrl:
-      "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg",
-    date: "2025-08-28",
-    time: "9:00 AM",
-    location: "Conference Room",
-    description: "A focused conference on community development.",
-  },
-];
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase"; // Import Firebase configuration
 
 const EventPage = () => {
-  const [events, setEvents] = useState(eventsData);
+  const [events, setEvents] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedType, setSelectedType] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Handle pagination
-  const handlePagination = (page: number) => {
-    setCurrentPage(page);
-  };
+  // Fetch events from Firestore
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const eventsCollection = collection(db, "events");
+      const eventSnapshot = await getDocs(eventsCollection);
+      const eventList = eventSnapshot.docs.map((doc) => ({
+        id: doc.id, // Add the Firestore doc ID
+        ...doc.data()
+      }));
+      setEvents(eventList);
+    };
 
-  // Handle filter and sorting
-  const handleFilterSort = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedType(e.target.value);
-    const filtered = eventsData.filter((event) =>
-      selectedType ? event.type === selectedType : true
-    );
-    setEvents(filtered);
-  };
+    fetchEvents();
+  }, []);
 
   useEffect(() => {
     gsap.fromTo(
@@ -94,12 +38,25 @@ const EventPage = () => {
     );
   }, [events]);
 
+  // Handle pagination
+  const handlePagination = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  // Handle filter and sorting
+  const handleFilterSort = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedType(e.target.value);
+    const filtered = events.filter((event) =>
+      selectedType ? event.type === selectedType : true
+    );
+    setEvents(filtered);
+  };
+
   const totalItems = events.length;
   const itemsPerPage = 4;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   return (
-    
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
       <Navbar />
@@ -156,21 +113,32 @@ const EventPage = () => {
         </div>
 
         {/* Event Cards Grid */}
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-  {events
-    .filter((event) => {
-      if (!searchQuery) return true;
-      return (
-        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.location.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    })
-    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-    .map((event) => (
-      <EventCard key={event.id} event={event} /> // Use the EventCard component
-    ))}
-</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {events
+            .filter((event) => {
+              if (!searchQuery) return true;
+              return (
+                event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                event.location.toLowerCase().includes(searchQuery.toLowerCase())
+              );
+            })
+            .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+            .map((event) => (
+              <EventCard
+                key={event.id}
+                title={event.title}
+                shortDescription={event.description}
+                location={event.location}
+                startDate={event.date}
+                endDate={event.endDate}
+                eventImageUrl={event.eventImageUrl}
+                interested={event.interested}  // Fetch dynamic "interested" from Firestore
+                attendees={event.attendies}  // Fetch dynamic "attendees" from Firestore
+                clubName={event.clubName}    // Fetch dynamic "clubName" from Firestore
+              />
+            ))}
+        </div>
 
         {/* Pagination */}
         <div className="flex justify-center items-center space-x-4 mt-8">

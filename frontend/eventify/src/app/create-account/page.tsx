@@ -129,15 +129,21 @@ const CreateAccount: React.FC = () => {
         >
           {isLoading ? 'Signing in with Google...' : 'Sign Up with Google'}
         </button>
+
         <div className="text-center text-gray-600 mt-4">
           <span>Already have an account? </span>
-          <button
-            onClick={handleEmailPasswordLogin}
-            className="text-blue-500 font-semibold"
-            disabled={isLoading}
-          >
-            Login Here
-          </button>
+          <br />
+            <a
+            href="/log-in"
+            className="text-blue-500 font-semibold hover:underline"
+            tabIndex={isLoading ? -1 : 0}
+            aria-disabled={isLoading}
+            onClick={e => {
+              if (isLoading) e.preventDefault();
+            }}
+            >
+            Login here
+            </a>
         </div>
       </div>
       <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} />

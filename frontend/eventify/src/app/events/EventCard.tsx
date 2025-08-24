@@ -1,77 +1,93 @@
-import { Calendar, MapPin, Clock } from "lucide-react";
+// EventCard.tsx
 
-interface Event {
-  id: number;
-  title: string;
-  description: string;
-  imageUrl: string;
-  date: string;
-  time: string;
-  location: string;
-  type: string;
-}
+import React from 'react';
+import { FaMapMarkerAlt, FaCalendarAlt, FaUserCircle, FaUsers } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 
 interface EventCardProps {
-  event: Event;
+  title: string;
+  shortDescription: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  eventImageUrl: string;
+  interested: number;
+  attendees: number;
+  clubName: string;
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event }) => {
+const EventCard: React.FC<EventCardProps> = ({
+  title,
+  shortDescription,
+  location,
+  startDate,
+  endDate,
+  eventImageUrl,
+  interested,
+  attendees,
+  clubName,
+}) => {
   return (
-    <div
-      key={event.id}
-      className="event-card bg-white/10 backdrop-blur-lg rounded-2xl overflow-hidden border border-white/20 hover:border-white/40 transition-all duration-500 transform hover:-translate-y-2 hover:shadow-2xl hover:shadow-purple-500/25"
-      style={{
-        animation: `slideInUp 0.6s ease-out ${event.id * 0.1}s both`,
-      }}
+    <motion.div
+      className="max-w-xs w-full rounded-lg overflow-hidden shadow-2xl bg-white/10 backdrop-blur-lg transform transition-all duration-700 hover:scale-105 hover:shadow-2xl hover:shadow-cyan-500/40"
+      whileHover={{ scale: 1.05 }}
     >
-      {/* Featured Badge */}
-      {event.type === "iapc" && (
-        <div className="absolute top-4 left-4 z-20">
-          <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
-            Featured
-          </div>
-        </div>
-      )}
-
-      {/* Image */}
-      <div className="relative h-48 overflow-hidden">
+      <div className="relative w-full h-64 overflow-hidden rounded-lg bg-black">
         <img
-          src={event.imageUrl}
-          alt={event.title}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          src={eventImageUrl}
+          alt={title}
+          className="w-full h-full object-cover rounded-t-lg transform transition-all duration-500 hover:scale-110"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/20"></div>
       </div>
 
-      {/* Content */}
-      <div className="p-6">
-        <h3 className="text-xl font-bold text-white mb-3 group-hover:text-blue-400 transition-colors duration-300">
-          {event.title}
-        </h3>
-        <p className="text-slate-300 text-sm mb-4 line-clamp-2">
-          {event.description}
-        </p>
+      <div className="p-6 space-y-4">
+        {/* Event Title */}
+        <h2 className="text-3xl font-semibold text-white mb-2 transform transition-all duration-300 hover:text-cyan-400">{title}</h2>
+        
+        {/* Club Name */}
+        <p className="text-sm text-gray-400 mb-4">{clubName}</p>
+        
+        {/* Event Description */}
+        <p className="text-sm text-gray-300 mb-4">{shortDescription}</p>
 
-        {/* Event Details */}
+        {/* Event Details - Location & Date */}
         <div className="space-y-3">
-          <div className="flex items-center text-slate-300 text-sm">
-            <Calendar className="w-4 h-4 mr-2 text-blue-400" />
-            <span>{event.date}</span>
-            <Clock className="w-4 h-4 ml-4 mr-2 text-green-400" />
-            <span>{event.time}</span>
+          {/* Location */}
+          <div className="flex items-center text-gray-300 mb-3">
+            <FaMapMarkerAlt className="mr-2 text-cyan-500" />
+            <span>{location}</span>
           </div>
-          <div className="flex items-center text-slate-300 text-sm">
-            <MapPin className="w-4 h-4 mr-2 text-red-400" />
-            <span className="truncate">{event.location}</span>
+
+          {/* Date */}
+          <div className="flex items-center text-gray-300 mb-3">
+            <FaCalendarAlt className="mr-2 text-cyan-500" />
+            <span>
+              {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}
+            </span>
+          </div>
+
+          {/* Interested & Attendees */}
+          <div className="flex justify-between items-center text-gray-300">
+            <div className="flex items-center">
+              <FaUsers className="mr-2 text-cyan-500" />
+              <span>{attendees} Attendees</span>
+            </div>
+            <div className="flex items-center">
+              <span>{interested} Interested</span>
+            </div>
           </div>
         </div>
 
-        {/* Action Button */}
-        <button className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-xl font-medium transition-all duration-300 transform hover:from-blue-500 hover:to-purple-500 hover:shadow-lg hover:shadow-blue-500/25 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-transparent">
-          Learn More
-        </button>
+        {/* Hover Button */}
+        <motion.button
+          className="w-full py-2 text-lg font-semibold text-white bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full transform transition-all duration-500 hover:scale-110 hover:shadow-lg hover:shadow-blue-500/50"
+          whileHover={{ scale: 1.05 }}
+        >
+          Attend Event
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

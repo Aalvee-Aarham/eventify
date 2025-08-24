@@ -36,5 +36,6 @@ export const db = getFirestore(app);  // Initialize Firestore
 // Google Authentication Provider
 const googleProvider = new GoogleAuthProvider();
 
+
 // Export auth and googleProvider
 export { auth, googleProvider };
