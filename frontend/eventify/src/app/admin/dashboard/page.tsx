@@ -57,7 +57,8 @@ import Navbar from '@/app/components/Navbar';
 import { collection, getDocs } from "firebase/firestore";
 import { db } from '@/app/firebase';// Import Firebase configuration
 import Link from 'next/link';
-
+import { deleteDoc, doc } from 'firebase/firestore';
+import { toast } from 'react-toastify';
 interface EventData {
   id: string;
   title: string;
@@ -136,6 +137,24 @@ const AdminDashboard: React.FC = () => {
 
     fetchEvents();
   }, []);
+
+  const deleteEvent = async (eventId: string) => {
+  try {
+    // Get a reference to the document in the "events" collection
+    const eventRef = doc(db, 'events', eventId);
+
+    // Delete the event document from Firestore
+    await deleteDoc(eventRef);
+
+    // After successful deletion, update state to remove the deleted event
+    setEvents(events.filter((event) => event.id !== eventId));
+
+    toast.success('Event deleted successfully!');
+  } catch (error:any) {
+    toast.error('Error deleting event: ' + error.message);
+    console.error('Error deleting event:', error);
+  }
+};
 
   // Calculate dynamic stats from events data
   const calculateStats = (eventsData: EventData[]) => {
@@ -618,14 +637,11 @@ const AdminDashboard: React.FC = () => {
                 <p className="text-slate-600 text-sm">Live data from Firestore database</p>
               </div>
               <div className="flex space-x-3">
-                <button className="flex items-center px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-sm">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filter
-                </button>
-                <button className="flex items-center px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-sm">
+
+                {/* <button className="flex items-center px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-sm">
                   <Download className="w-4 h-4 mr-2" />
                   Export
-                </button>
+                </button> */}
     <Link href="/admin/add-event">
       <button className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm">
         <Plus className="w-4 h-4 mr-2" />
@@ -688,15 +704,13 @@ const AdminDashboard: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        <button className="text-blue-500 hover:text-blue-700 focus:outline-none">
-                          <Edit className="w-5 h-5" />
-                        </button>
-                        <button className="text-red-500 hover:text-red-700 focus:outline-none">
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                        <button className="text-green-500 hover:text-green-700 focus:outline-none">
-                          <Eye className="w-5 h-5" />
-                        </button>
+<button 
+  onClick={() => deleteEvent(event.id)} 
+  className="text-red-500 hover:text-red-700 focus:outline-none"
+>
+  <Trash2 className="w-5 h-5" />
+</button>
+
                       </div>
                     </td>
                   </tr>
