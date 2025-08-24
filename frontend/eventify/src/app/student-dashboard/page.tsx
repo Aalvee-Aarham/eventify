@@ -38,6 +38,7 @@ import {
   Download,
   MoreHorizontal
 } from 'lucide-react';
+import Navbar from '../components/Navbar';
 
 interface StudentProfile {
   id: string;
@@ -387,52 +388,7 @@ const StudentDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-lg border-b border-slate-200/60 sticky top-0 z-40">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <img
-                src={studentProfile.avatar}
-                alt="Profile"
-                className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md"
-              />
-              <div>
-                <h1 className="text-xl font-bold text-slate-900">Welcome back, {studentProfile.name.split(' ')[0]}! 👋</h1>
-                <p className="text-slate-600 text-sm">{studentProfile.level} • {studentProfile.points.toLocaleString()} points</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search events..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 bg-slate-100 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
-                />
-              </div>
-
-              {/* Notifications */}
-              <button className="relative p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
-                <Bell className="w-5 h-5 text-slate-600" />
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">2</span>
-              </button>
-
-              {/* Settings */}
-              <button 
-                onClick={() => setShowEditProfile(true)}
-                className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
-              >
-                <Settings className="w-5 h-5 text-slate-600" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
+      <Navbar />
       <div className="p-6">
         {/* Profile Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

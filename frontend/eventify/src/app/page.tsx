@@ -3,6 +3,7 @@ import Navbar from "./components/Navbar";
 import Hero from "./home/Hero";
 import Feature from "./home/Feature";
 import Footer from "./home/Footer";
+import FloatingAIAssistant from "./components/ai";
 
 export default function Home() {
   return (
@@ -11,6 +12,7 @@ export default function Home() {
       <Hero />
       <Feature />
       <Footer />
+      <FloatingAIAssistant /> {/* Add this component */}
 
     </div>
   );

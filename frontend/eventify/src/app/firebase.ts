@@ -1,9 +1,9 @@
 import { initializeApp } from 'firebase/app';
-import { browserLocalPersistence, getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getAnalytics } from 'firebase/analytics';
-import { getFirestore } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getFirestore, collection, getDocs, DocumentData } from 'firebase/firestore';
+import { getAI, getGenerativeModel, GoogleAIBackend } from 'firebase/ai';
 
-// Define the Firebase config
+// Firebase config
 const firebaseConfig = {
   apiKey: 'AIzaSyBpPrMPZGmqo_jku2yNULqyWJeD5o1v7Z4',
   authDomain: 'eventify-43e64.firebaseapp.com',
@@ -14,28 +14,33 @@ const firebaseConfig = {
   measurementId: 'G-2SGNY716EK',
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase Authentication
 const auth = getAuth(app);
 
-// Set persistence to localStorage for session persistence
-auth.setPersistence(browserLocalPersistence)
-  .then(() => {
-    console.log("Persistence set to localStorage.");
-    // Now you can proceed with authentication operations like signup or login
-  })
-  .catch((error) => {
-    console.error("Error setting persistence:", error);
-  });
-
 // Initialize Firestore
-export const db = getFirestore(app);  // Initialize Firestore
+const db = getFirestore(app);
 
-// Google Authentication Provider
+// Initialize Gemini AI
+const ai = getAI(app, { backend: new GoogleAIBackend() });
+const model = getGenerativeModel(ai, { model: "gemini-2.5-flash" });
+
+// Firestore Event Data Interface
+interface Event {
+  name: string;
+  date: string;
+  description?: string;
+}
+
+// Fetch events from Firestore
+  const fetchEvents = async (): Promise<Event[]> => {
+  const eventsRef = collection(db, 'events'); // Access the 'events' collection
+  const eventSnapshot = await getDocs(eventsRef); // Fetch documents from the collection
+  const eventsList: Event[] = eventSnapshot.docs.map(doc => doc.data() as Event); // Map over documents and cast to Event type
+  return eventsList;
+};
+
+// Exporting other necessary Firebase features
 const googleProvider = new GoogleAuthProvider();
-
-
-// Export auth and googleProvider
-export { auth, googleProvider };
+export { auth, googleProvider, db, model, fetchEvents };
