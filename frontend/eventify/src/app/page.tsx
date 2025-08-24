@@ -8,7 +8,7 @@ import FloatingAIAssistant from "./components/ai";
 export default function Home() {
   return (
     <div>
-          <Navbar />
+      <Navbar />
       <Hero />
       <Feature />
       <Footer />

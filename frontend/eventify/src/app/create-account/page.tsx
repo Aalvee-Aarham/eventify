@@ -6,11 +6,13 @@ import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPass
 import { toast, ToastContainer } from 'react-toastify';
 import { db } from '../firebase'; // Import Firestore instance
 import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore'; // Use full Firestore functions
+import { useRouter } from 'next/router'; // Import useRouter for navigation
 
 const CreateAccount: React.FC = () => {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const router = useRouter(); // Initialize useRouter
 
   // Sign up with Email and Password
   const handleEmailPasswordSignup = async () => {
@@ -34,6 +36,9 @@ const CreateAccount: React.FC = () => {
       localStorage.setItem('user', JSON.stringify(user));
 
       toast.success('Account created successfully!');
+      
+      // Navigate to /registration after successful account creation
+      router.push('/registration'); // Add this line for navigation
     } catch (error: any) {
       toast.error(`Error: ${error.message}`);
     } finally {
@@ -51,6 +56,9 @@ const CreateAccount: React.FC = () => {
       if (user) {
         localStorage.setItem('user', JSON.stringify(user));
         toast.success('Logged in successfully!');
+        
+        // Navigate to /registration after successful login
+        router.push('/registration'); // Add this line for navigation
       }
     } catch (error: any) {
       toast.error(`Error: ${error.message}`);
@@ -89,6 +97,9 @@ const CreateAccount: React.FC = () => {
       }
 
       toast.success('Google Sign-In successful!');
+      
+      // Navigate to /registration after successful Google login
+      router.push('/registration'); // Add this line for navigation
     } catch (error: any) {
       toast.error(`Error: ${error.message}`);
     } finally {

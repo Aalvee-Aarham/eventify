@@ -1,6 +1,6 @@
 'use client'; // Add this at the very top
-
-
+import { db } from '../firebase'; // Firestore instance
+import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import React, { useState, useEffect } from 'react';
 import {
   Calendar,
@@ -36,9 +36,13 @@ import {
   ArrowRight,
   ExternalLink,
   Download,
-  MoreHorizontal
+  MoreHorizontal,
+  Menu,
+  Home
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
+
+
 
 interface StudentProfile {
   id: string;
@@ -46,7 +50,6 @@ interface StudentProfile {
   email: string;
   phone: string;
   avatar: string;
-  bio: string;
   interests: string[];
   joinDate: string;
   eventsAttended: number;
@@ -87,11 +90,10 @@ const StudentDashboard: React.FC = () => {
     email: 'alex.johnson@university.edu',
     phone: '+1 (555) 123-4567',
     avatar: 'https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg',
-    bio: 'Computer Science student passionate about AI, music, and photography. Love attending tech meetups and cultural events!',
     interests: ['programming', 'photography', 'music', 'sports'],
     joinDate: '2023-09-01',
     eventsAttended: 24,
-    points: 1,
+    points: 1250,
     level: 'Event Explorer',
     achievements: ['First Event', 'Tech Enthusiast', 'Social Butterfly', 'Early Bird']
   });
@@ -106,13 +108,45 @@ const StudentDashboard: React.FC = () => {
     { id: 'music', name: 'Music', icon: Music, color: 'bg-yellow-500' }
   ];
 
+    const fetchUserData = async (userId: string) => {
+    console.log('Fetching user data from Firestore:', userId);
+    const userDocRef = doc(db, 'users', userId);
+    const docSnap = await getDoc(userDocRef);
+
+    if (docSnap.exists()) {
+      const userData = docSnap.data();
+      console.log('User data fetched:', userData);
+      setStudentProfile((prevProfile) => ({
+        ...prevProfile,
+        name: userData?.name || '', // Update name from Firestore
+      }));
+    } else {
+      console.log('User data does not exist in Firestore');
+    }
+  };
+
+  // Check if the user is logged in and fetch data when the component is mounted
+  useEffect(() => {
+    const isClient = typeof window !== 'undefined'; // Check if client-side
+    if (!isClient) return; // Wait for client-side mounting
+
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      console.log('User fetched from localStorage:', parsedUser);
+      fetchUserData(parsedUser.uid);
+    } else {
+      console.log('No user found in localStorage');
+    }
+  }, []);
+
   // Mock events data
   const [registeredEvents] = useState<Event[]>([
     {
       id: 1,
       title: "AI & Machine Learning Summit",
       description: "Deep dive into the latest AI technologies and applications",
-      image: "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg",
+      image: "https://images.pexels.com/photos/373543/pexels-photo-373543.jpeg",
       date: "2024-09-15",
       time: "10:00 AM",
       location: "Tech Hub Convention Center",
@@ -128,7 +162,7 @@ const StudentDashboard: React.FC = () => {
       id: 2,
       title: "Photography Workshop",
       description: "Master the art of portrait and landscape photography",
-      image: "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg",
+      image: "https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg",
       date: "2024-09-20",
       time: "2:00 PM",
       location: "Creative Arts Center",
@@ -147,7 +181,7 @@ const StudentDashboard: React.FC = () => {
       id: 3,
       title: "Gaming Tournament 2024",
       description: "Compete in multiple gaming categories and win prizes",
-      image: "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg",
+      image: "https://images.pexels.com/photos/442576/pexels-photo-442576.jpeg",
       date: "2024-09-25",
       time: "1:00 PM",
       location: "Gaming Arena",
@@ -163,7 +197,7 @@ const StudentDashboard: React.FC = () => {
       id: 4,
       title: "Music Festival",
       description: "Live performances by student bands and guest artists",
-      image: "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg",
+      image: "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg",
       date: "2024-10-05",
       time: "6:00 PM",
       location: "University Amphitheater",
@@ -179,7 +213,7 @@ const StudentDashboard: React.FC = () => {
       id: 5,
       title: "Sports Day Championship",
       description: "Inter-college sports competition across various disciplines",
-      image: "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg",
+      image: "https://images.pexels.com/photos/209841/pexels-photo-209841.jpeg",
       date: "2024-10-12",
       time: "8:00 AM",
       location: "Sports Complex",
@@ -198,7 +232,7 @@ const StudentDashboard: React.FC = () => {
       id: 6,
       title: "Coding Bootcamp",
       description: "Intensive programming workshop for beginners",
-      image: "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg",
+      image: "https://images.pexels.com/photos/574071/pexels-photo-574071.jpeg",
       date: "2024-08-15",
       time: "9:00 AM",
       location: "Computer Lab",
@@ -214,7 +248,7 @@ const StudentDashboard: React.FC = () => {
       id: 7,
       title: "Street Photography Walk",
       description: "Explore the city and capture stunning street photographs",
-      image: "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg",
+      image: "https://images.pexels.com/photos/1002638/pexels-photo-1002638.jpeg",
       date: "2024-08-10",
       time: "7:00 AM",
       location: "City Downtown",
@@ -230,7 +264,7 @@ const StudentDashboard: React.FC = () => {
       id: 8,
       title: "Basketball Tournament",
       description: "College basketball championship finals",
-      image: "https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg",
+      image: "https://images.pexels.com/photos/358042/pexels-photo-358042.jpeg",
       date: "2024-07-20",
       time: "3:00 PM",
       location: "Sports Arena",
@@ -250,6 +284,124 @@ const StudentDashboard: React.FC = () => {
       day: 'numeric',
       year: 'numeric'
     });
+  };
+
+  const generateCertificate = (event: Event) => {
+    // Create a canvas for the certificate
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return;
+    
+    // Set canvas size
+    canvas.width = 1200;
+    canvas.height = 800;
+    
+    // Create gradient background
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, '#667eea');
+    gradient.addColorStop(0.5, '#764ba2');
+    gradient.addColorStop(1, '#f093fb');
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Add decorative border
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 8;
+    ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+    
+    // Inner border
+    ctx.lineWidth = 2;
+    ctx.strokeRect(60, 60, canvas.width - 120, canvas.height - 120);
+    
+    // Certificate content
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffffff';
+    
+    // Title
+    ctx.font = 'bold 48px serif';
+    ctx.fillText('CERTIFICATE OF PARTICIPATION', canvas.width / 2, 180);
+    
+    // Subtitle
+    ctx.font = '24px serif';
+    ctx.fillText('This is to certify that', canvas.width / 2, 240);
+    
+    // Student name
+    ctx.font = 'bold 42px serif';
+    ctx.fillText(studentProfile.name, canvas.width / 2, 320);
+    
+    // Event participation text
+    ctx.font = '24px serif';
+    ctx.fillText('has successfully participated in', canvas.width / 2, 380);
+    
+    // Event name
+    ctx.font = 'bold 36px serif';
+    const maxWidth = canvas.width - 200;
+    const words = event.title.split(' ');
+    let line = '';
+    let y = 440;
+    
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = ctx.measureText(testLine);
+      const testWidth = metrics.width;
+      
+      if (testWidth > maxWidth && n > 0) {
+        ctx.fillText(line, canvas.width / 2, y);
+        line = words[n] + ' ';
+        y += 40;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText(line, canvas.width / 2, y);
+    
+    // Date and location
+    ctx.font = '20px serif';
+    ctx.fillText(`Held on ${formatDate(event.date)} at ${event.location}`, canvas.width / 2, y + 80);
+    
+    // Rating if available
+    if (event.rating) {
+      ctx.fillText(`Performance Rating: ${event.rating}/5`, canvas.width / 2, y + 120);
+    }
+    
+    // Signature section
+    ctx.font = '18px serif';
+    ctx.fillText('Event Organizer', 300, canvas.height - 120);
+    ctx.fillText(`${event.organizer}`, 300, canvas.height - 100);
+    
+    ctx.fillText('Date of Completion', 900, canvas.height - 120);
+    ctx.fillText(formatDate(event.date), 900, canvas.height - 100);
+    
+    // Add some decorative elements
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    
+    // Signature lines
+    ctx.beginPath();
+    ctx.moveTo(200, canvas.height - 80);
+    ctx.lineTo(400, canvas.height - 80);
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(800, canvas.height - 80);
+    ctx.lineTo(1000, canvas.height - 80);
+    ctx.stroke();
+    
+    // Convert canvas to blob and download
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${event.title.replace(/[^a-zA-Z0-9]/g, '_')}_Certificate.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    }, 'image/png');
   };
 
   const getStatusColor = (status: string) => {
@@ -272,7 +424,7 @@ const StudentDashboard: React.FC = () => {
     return interest?.color || 'bg-gray-500';
   };
 
-  const renderEventCard = (event: Event, showActions = true) => {
+  const renderEventCard = (event: Event, showActions = true, isPastEvent = false) => {
     const IconComponent = getInterestIcon(event.category);
     
     return (
@@ -358,6 +510,19 @@ const StudentDashboard: React.FC = () => {
                 ))}
                 <span className="text-sm text-slate-600 ml-2">{event.rating}</span>
               </div>
+            </div>
+          )}
+
+          {/* Certificate button for past events */}
+          {isPastEvent && (
+            <div className="mb-4">
+              <button
+                onClick={() => generateCertificate(event)}
+                className="w-full flex items-center justify-center px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 shadow-lg"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Generate Certificate
+              </button>
             </div>
           )}
 
@@ -619,6 +784,31 @@ const StudentDashboard: React.FC = () => {
           </div>
         )}
 
+        {activeTab === 'interested' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-slate-900">Events You're Interested In</h2>
+              <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <Plus className="w-4 h-4 mr-2" />
+                Find More Events
+              </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {interestedEvents.map(event => renderEventCard(event))}
+            </div>
+            {interestedEvents.length === 0 && (
+              <div className="text-center py-12">
+                <Heart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900 mb-2">No interested events yet</h3>
+                <p className="text-slate-600 mb-6">Mark events as interesting to see them here!</p>
+                <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                  Browse Events
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'past' && (
           <div>
             <div className="flex items-center justify-between mb-6">
@@ -629,7 +819,7 @@ const StudentDashboard: React.FC = () => {
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {pastEvents.map(event => renderEventCard(event, false))}
+              {pastEvents.map(event => renderEventCard(event, false, true))}
             </div>
             {pastEvents.length === 0 && (
               <div className="text-center py-12">
@@ -645,23 +835,59 @@ const StudentDashboard: React.FC = () => {
         )}
 
         {activeTab === 'profile' && (
-          <div>
-            <div className="flex items-center mb-6">
-              <img
-                src={studentProfile.avatar}
-                alt="Profile"
-                className="w-20 h-20 rounded-full object-cover mr-6"
-              />
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900">{studentProfile.name}</h2>
-                <p className="text-slate-600 text-sm">{studentProfile.bio}</p>
-                <p className="text-slate-500 text-sm mt-2">Email: {studentProfile.email}</p>
-                <p className="text-slate-500 text-sm">Phone: {studentProfile.phone}</p>
-                <p className="text-slate-500 text-sm">Joined: {formatDate(studentProfile.joinDate)}</p>
+          <div className="space-y-8">
+
+            {/* Profile Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 text-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <CalendarIcon className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900">{studentProfile.eventsAttended}</h3>
+                <p className="text-slate-600">Events Attended</p>
+              </div>
+              
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 text-center">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Award className="w-6 h-6 text-green-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900">{studentProfile.points}</h3>
+                <p className="text-slate-600">Total Points</p>
+              </div>
+              
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 text-center">
+                <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Trophy className="w-6 h-6 text-yellow-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900">{studentProfile.achievements.length}</h3>
+                <p className="text-slate-600">Achievements</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 mb-8">
+            {/* Interests */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Your Interests</h3>
+              <div className="flex flex-wrap gap-3">
+                {studentProfile.interests.map((interest) => {
+                  const interestOption = interestOptions.find(opt => opt.id === interest);
+                  if (!interestOption) return null;
+                  const IconComponent = interestOption.icon;
+                  
+                  return (
+                    <div
+                      key={interest}
+                      className={`flex items-center px-4 py-2 rounded-full text-sm font-medium text-white ${interestOption.color}`}
+                    >
+                      <IconComponent className="w-4 h-4 mr-2" />
+                      {interestOption.name}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Achievements */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
               <h3 className="text-lg font-semibold text-slate-900 mb-4">Achievements</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {studentProfile.achievements.map((achievement, index) => (
@@ -670,6 +896,35 @@ const StudentDashboard: React.FC = () => {
                       <Award className="w-6 h-6 text-white" />
                     </div>
                     <p className="font-medium text-slate-900 text-sm">{achievement}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent Activity Timeline */}
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Recent Activity Timeline</h3>
+              <div className="space-y-4">
+                {[
+                  { date: '2024-08-15', event: 'Completed Coding Bootcamp', type: 'completed' },
+                  { date: '2024-08-10', event: 'Attended Street Photography Walk', type: 'attended' },
+                  { date: '2024-07-20', event: 'Participated in Basketball Tournament', type: 'participated' },
+                  { date: '2024-07-15', event: 'Earned "Tech Enthusiast" badge', type: 'achievement' }
+                ].map((activity, index) => (
+                  <div key={index} className="flex items-center space-x-4 p-4 bg-slate-50 rounded-lg">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0"></div>
+                    <div className="flex-1">
+                      <p className="text-slate-900 font-medium">{activity.event}</p>
+                      <p className="text-slate-500 text-sm">{formatDate(activity.date)}</p>
+                    </div>
+                    <div className={`px-2 py-1 text-xs rounded-full ${
+                      activity.type === 'completed' ? 'bg-green-100 text-green-800' :
+                      activity.type === 'attended' ? 'bg-blue-100 text-blue-800' :
+                      activity.type === 'participated' ? 'bg-purple-100 text-purple-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {activity.type.charAt(0).toUpperCase() + activity.type.slice(1)}
+                    </div>
                   </div>
                 ))}
               </div>

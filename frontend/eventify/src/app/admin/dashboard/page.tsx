@@ -53,20 +53,28 @@ import {
   Calendar as CalendarIcon
 } from 'lucide-react';
 import { Edit, Trash2 } from 'lucide-react';
+import Navbar from '@/app/components/Navbar';
+import { collection, getDocs } from "firebase/firestore";
+import { db } from '@/app/firebase';// Import Firebase configuration
+import Link from 'next/link';
 
 interface EventData {
-  id: number;
-  name: string;
+  id: string;
+  title: string;
   date: string;
-  attendees: number;
+  endDate?: string;
+  attendies: number;
   interested: number;
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-  category: string;
-  revenue: number;
+  type: string;
+  location: string;
+  clubName: string;
+  description: string;
+  eventImageUrl?: string;
+  revenue?: number;
 }
 
 interface ClubData {
-  id: number;
   name: string;
   events: number;
   members: number;
@@ -83,99 +91,216 @@ interface StatsData {
   completedEvents: number;
 }
 
-const AdminDashboard: React.FC = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState('7d');
-  const [selectedView, setSelectedView] = useState('overview');
+interface CategoryStats {
+  name: string;
+  value: number;
+  color: string;
+}
 
-  // Mock data - replace with actual API calls
-  const [stats] = useState<StatsData>({
-    totalEvents: 156,
-    totalClubs: 24,
-    totalAttendees: 8924,
-    ongoingEvents: 12,
-    upcomingEvents: 28,
-    completedEvents: 98,
+const AdminDashboard: React.FC = () => {
+  const [events, setEvents] = useState<EventData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<StatsData>({
+    totalEvents: 0,
+    totalClubs: 0,
+    totalAttendees: 0,
+    ongoingEvents: 0,
+    upcomingEvents: 0,
+    completedEvents: 0,
   });
 
-  const [recentEvents] = useState<EventData[]>([
-    {
-      id: 1,
-      name: "AI & Machine Learning Summit",
-      date: "2024-09-15",
-      attendees: 1247,
-      interested: 2340,
-      status: "upcoming",
-      category: "Technology",
-      revenue: 12500
-    },
-    {
-      id: 2,
-      name: "Cultural Heritage Festival",
-      date: "2024-09-10",
-      attendees: 856,
-      interested: 1120,
-      status: "ongoing",
-      category: "Cultural",
-      revenue: 8900
-    },
-    {
-      id: 3,
-      name: "Sports Championship",
-      date: "2024-09-05",
-      attendees: 2100,
-      interested: 3200,
-      status: "completed",
-      category: "Sports",
-      revenue: 18500
-    },
-    {
-      id: 4,
-      name: "Innovation Workshop",
-      date: "2024-08-28",
-      attendees: 340,
-      interested: 450,
-      status: "cancelled",
-      category: "Education",
-      revenue: 0
+  // Fetch events from Firestore
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true);
+        const eventsCollection = collection(db, "events");
+        const eventSnapshot = await getDocs(eventsCollection);
+        const eventList = eventSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          // Ensure proper data types
+          attendies: doc.data().attendies || 0,
+          interested: doc.data().interested || 0,
+          revenue: doc.data().revenue || 0,
+        })) as EventData[];
+        
+        setEvents(eventList);
+        calculateStats(eventList);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
+  // Calculate dynamic stats from events data
+  const calculateStats = (eventsData: EventData[]) => {
+    const now = new Date();
+    const totalAttendees = eventsData.reduce((sum, event) => sum + (event.attendies || 0), 0);
+    const uniqueClubs = new Set(eventsData.map(event => event.clubName)).size;
+
+    // Calculate event status counts
+    let ongoingEvents = 0;
+    let upcomingEvents = 0;
+    let completedEvents = 0;
+
+    eventsData.forEach(event => {
+      const eventDate = new Date(event.date);
+      const endDate = event.endDate ? new Date(event.endDate) : eventDate;
+      
+      if (eventDate <= now && endDate >= now) {
+        ongoingEvents++;
+      } else if (eventDate > now) {
+        upcomingEvents++;
+      } else {
+        completedEvents++;
+      }
+    });
+
+    setStats({
+      totalEvents: eventsData.length,
+      totalClubs: uniqueClubs,
+      totalAttendees,
+      ongoingEvents,
+      upcomingEvents,
+      completedEvents,
+    });
+  };
+
+  // Generate category data from events
+  const getCategoryData = (): CategoryStats[] => {
+    const categoryColors: { [key: string]: string } = {
+      'iapc': '#3B82F6',
+      'cultural': '#8B5CF6',
+      'sports': '#10B981',
+      'idc': '#F59E0B',
+      'cdc': '#EF4444',
+      'technology': '#06B6D4',
+      'business': '#F97316',
+      'education': '#84CC16'
+    };
+
+    const categoryCount: { [key: string]: number } = {};
+    events.forEach(event => {
+      const category = event.type?.toLowerCase() || 'other';
+      categoryCount[category] = (categoryCount[category] || 0) + 1;
+    });
+
+    const total = events.length || 1;
+    return Object.entries(categoryCount).map(([name, count]) => ({
+      name: name.toUpperCase(),
+      value: Math.round((count / total) * 100),
+      color: categoryColors[name] || '#6B7280'
+    }));
+  };
+
+  // Generate monthly trend data from events
+  const getAttendeesTrendData = () => {
+    const monthlyData: { [key: string]: { attendees: number; interested: number; revenue: number; count: number } } = {};
+    
+    events.forEach(event => {
+      const eventDate = new Date(event.date);
+      const monthKey = eventDate.toLocaleDateString('en-US', { month: 'short' });
+      
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { attendees: 0, interested: 0, revenue: 0, count: 0 };
+      }
+      
+      monthlyData[monthKey].attendees += event.attendies || 0;
+      monthlyData[monthKey].interested += event.interested || 0;
+      monthlyData[monthKey].revenue += event.revenue || 0;
+      monthlyData[monthKey].count += 1;
+    });
+
+    // Generate last 8 months
+    const result = [];
+    const now = new Date();
+    for (let i = 7; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = date.toLocaleDateString('en-US', { month: 'short' });
+      result.push({
+        month: monthKey,
+        attendees: monthlyData[monthKey]?.attendees || 0,
+        interested: monthlyData[monthKey]?.interested || 0,
+        revenue: monthlyData[monthKey]?.revenue || 0
+      });
     }
-  ]);
+    
+    return result;
+  };
 
-  const [topClubs] = useState<ClubData[]>([
-    { id: 1, name: "Tech Innovators", events: 24, members: 450, category: "Technology", rating: 4.8 },
-    { id: 2, name: "Cultural Society", events: 18, members: 320, category: "Cultural", rating: 4.6 },
-    { id: 3, name: "Sports Club", events: 32, members: 680, category: "Sports", rating: 4.9 },
-    { id: 4, name: "Business Network", events: 15, members: 280, category: "Business", rating: 4.4 }
-  ]);
+  // Generate weekly events data
+  const getWeeklyEventsData = () => {
+    const weeklyData = [
+      { day: 'Mon', events: 0, attendees: 0 },
+      { day: 'Tue', events: 0, attendees: 0 },
+      { day: 'Wed', events: 0, attendees: 0 },
+      { day: 'Thu', events: 0, attendees: 0 },
+      { day: 'Fri', events: 0, attendees: 0 },
+      { day: 'Sat', events: 0, attendees: 0 },
+      { day: 'Sun', events: 0, attendees: 0 }
+    ];
 
-  // Chart data
-  const attendeesTrendData = [
-    { month: 'Jan', attendees: 2400, interested: 3200, revenue: 18000 },
-    { month: 'Feb', attendees: 1398, interested: 2100, revenue: 14500 },
-    { month: 'Mar', attendees: 3800, interested: 4500, revenue: 28000 },
-    { month: 'Apr', attendees: 3908, interested: 4200, revenue: 32000 },
-    { month: 'May', attendees: 4800, interested: 5100, revenue: 38500 },
-    { month: 'Jun', attendees: 3800, interested: 4300, revenue: 29000 },
-    { month: 'Jul', attendees: 4300, interested: 4800, revenue: 34000 },
-    { month: 'Aug', attendees: 5200, interested: 5900, revenue: 42000 }
-  ];
+    events.forEach(event => {
+        try {
+      const eventDate = new Date(event.date);
+      const dayIndex = eventDate.getDay();
+      const adjustedIndex = dayIndex === 0 ? 6 : dayIndex - 1; // Adjust Sunday to be last
+      
+      weeklyData[adjustedIndex].events += 1;
+      weeklyData[adjustedIndex].attendees += event.attendies || 0
+        } catch {}
+;
+    });
 
-  const categoryData = [
-    { name: 'Technology', value: 35, color: '#3B82F6' },
-    { name: 'Cultural', value: 25, color: '#8B5CF6' },
-    { name: 'Sports', value: 20, color: '#10B981' },
-    { name: 'Business', value: 12, color: '#F59E0B' },
-    { name: 'Education', value: 8, color: '#EF4444' }
-  ];
+    return weeklyData;
+  };
 
-  const weeklyEventsData = [
-    { day: 'Mon', events: 12, attendees: 340 },
-    { day: 'Tue', events: 19, attendees: 520 },
-    { day: 'Wed', events: 8, attendees: 280 },
-    { day: 'Thu', events: 15, attendees: 450 },
-    { day: 'Fri', events: 22, attendees: 680 },
-    { day: 'Sat', events: 18, attendees: 590 },
-    { day: 'Sun', events: 14, attendees: 420 }
-  ];
+  // Generate top clubs data
+  const getTopClubs = (): ClubData[] => {
+    const clubStats: { [key: string]: { events: number; attendees: number; types: Set<string> } } = {};
+    
+    events.forEach(event => {
+      const clubName = event.clubName || 'Unknown Club';
+      if (!clubStats[clubName]) {
+        clubStats[clubName] = { events: 0, attendees: 0, types: new Set() };
+      }
+      
+      clubStats[clubName].events += 1;
+      clubStats[clubName].attendees += event.attendies || 0;
+      clubStats[clubName].types.add(event.type || 'other');
+    });
+
+    return Object.entries(clubStats)
+      .map(([name, stats]) => ({
+        name,
+        events: stats.events,
+        members: stats.attendees, // Using attendees as proxy for members
+        category: Array.from(stats.types)[0]?.toUpperCase() || 'MIXED',
+        rating: Math.min(5.0, 3.5 + (stats.events * 0.1)) // Generate rating based on event count
+      }))
+      .sort((a, b) => b.events - a.events)
+      .slice(0, 4);
+  };
+
+  // Determine event status based on dates
+  const getEventStatus = (event: EventData): 'upcoming' | 'ongoing' | 'completed' | 'cancelled' => {
+    const now = new Date();
+    const eventDate = new Date(event.date);
+    const endDate = event.endDate ? new Date(event.endDate) : eventDate;
+    
+    if (eventDate <= now && endDate >= now) {
+      return 'ongoing';
+    } else if (eventDate > now) {
+      return 'upcoming';
+    } else {
+      return 'completed';
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -193,36 +318,31 @@ const AdminDashboard: React.FC = () => {
     return num.toString();
   };
 
+  // Get computed data
+  const categoryData = getCategoryData();
+  const attendeesTrendData = getAttendeesTrendData();
+  const weeklyEventsData = getWeeklyEventsData();
+  const topClubs = getTopClubs();
+  const recentEvents = events.slice(0, 10); // Show last 10 events
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <Navbar />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-slate-600">Loading dashboard data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-lg border-b border-slate-200/60 sticky top-0 z-40">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Event Management Dashboard</h1>
-              <p className="text-slate-600 mt-1">Monitor and manage your events efficiently</p>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-
-              {/* Profile */}
-              <div className="flex items-center space-x-3">
-                <img
-                  src="https://images.pexels.com/photos/976866/pexels-photo-976866.jpeg"
-                  alt="Admin"
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-                <div className="text-right">
-                  <p className="text-sm font-medium text-slate-900">Admin User</p>
-                  <p className="text-xs text-slate-500">Super Admin</p>
-                </div>
-                <ChevronDown className="w-4 h-4 text-slate-400" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <div className="p-6">
         {/* Stats Overview Cards */}
@@ -235,8 +355,8 @@ const AdminDashboard: React.FC = () => {
                 <p className="text-3xl font-bold text-slate-900 mt-2">{stats.totalEvents}</p>
                 <div className="flex items-center mt-2">
                   <ArrowUpRight className="w-4 h-4 text-green-500 mr-1" />
-                  <span className="text-green-600 text-sm font-medium">+12.5%</span>
-                  <span className="text-slate-500 text-sm ml-1">vs last month</span>
+                  <span className="text-green-600 text-sm font-medium">Active</span>
+                  <span className="text-slate-500 text-sm ml-1">events system</span>
                 </div>
               </div>
               <div className="bg-blue-100 p-3 rounded-xl">
@@ -253,8 +373,8 @@ const AdminDashboard: React.FC = () => {
                 <p className="text-3xl font-bold text-slate-900 mt-2">{formatNumber(stats.totalAttendees)}</p>
                 <div className="flex items-center mt-2">
                   <ArrowUpRight className="w-4 h-4 text-green-500 mr-1" />
-                  <span className="text-green-600 text-sm font-medium">+18.2%</span>
-                  <span className="text-slate-500 text-sm ml-1">vs last month</span>
+                  <span className="text-green-600 text-sm font-medium">Live data</span>
+                  <span className="text-slate-500 text-sm ml-1">from Firestore</span>
                 </div>
               </div>
               <div className="bg-green-100 p-3 rounded-xl">
@@ -262,8 +382,6 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
           </div>
-
-
 
           {/* Active Clubs */}
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200/60 hover:shadow-lg transition-all duration-300">
@@ -273,8 +391,8 @@ const AdminDashboard: React.FC = () => {
                 <p className="text-3xl font-bold text-slate-900 mt-2">{stats.totalClubs}</p>
                 <div className="flex items-center mt-2">
                   <ArrowUpRight className="w-4 h-4 text-green-500 mr-1" />
-                  <span className="text-green-600 text-sm font-medium">+5.4%</span>
-                  <span className="text-slate-500 text-sm ml-1">vs last month</span>
+                  <span className="text-green-600 text-sm font-medium">Unique</span>
+                  <span className="text-slate-500 text-sm ml-1">organizations</span>
                 </div>
               </div>
               <div className="bg-purple-100 p-3 rounded-xl">
@@ -315,8 +433,6 @@ const AdminDashboard: React.FC = () => {
               <CheckCircle className="w-8 h-8 text-gray-200" />
             </div>
           </div>
-
-
         </div>
 
         {/* Charts Row */}
@@ -437,7 +553,7 @@ const AdminDashboard: React.FC = () => {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-semibold text-slate-900">Weekly Event Activity</h3>
-                <p className="text-slate-600 text-sm">Events and attendance by day</p>
+                <p className="text-slate-600 text-sm">Events distribution by day of week</p>
               </div>
               <BarChart3 className="w-6 h-6 text-slate-400" />
             </div>
@@ -464,13 +580,13 @@ const AdminDashboard: React.FC = () => {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-semibold text-slate-900">Top Clubs</h3>
-                <p className="text-slate-600 text-sm">Best performing clubs</p>
+                <p className="text-slate-600 text-sm">Most active organizations</p>
               </div>
               <Award className="w-6 h-6 text-slate-400" />
             </div>
             <div className="space-y-4">
               {topClubs.map((club, index) => (
-                <div key={club.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                <div key={index} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
                   <div className="flex items-center">
                     <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm mr-3">
                       {index + 1}
@@ -483,7 +599,7 @@ const AdminDashboard: React.FC = () => {
                   <div className="text-right">
                     <div className="flex items-center">
                       <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
-                      <span className="text-sm font-medium">{club.rating}</span>
+                      <span className="text-sm font-medium">{club.rating.toFixed(1)}</span>
                     </div>
                     <p className="text-xs text-slate-600">{club.events} events</p>
                   </div>
@@ -499,7 +615,7 @@ const AdminDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-slate-900">Recent Events</h3>
-                <p className="text-slate-600 text-sm">Latest event activities and status</p>
+                <p className="text-slate-600 text-sm">Live data from Firestore database</p>
               </div>
               <div className="flex space-x-3">
                 <button className="flex items-center px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors text-sm">
@@ -510,10 +626,12 @@ const AdminDashboard: React.FC = () => {
                   <Download className="w-4 h-4 mr-2" />
                   Export
                 </button>
-                <button className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Event
-                </button>
+    <Link href="/admin/add-event">
+      <button className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm">
+        <Plus className="w-4 h-4 mr-2" />
+        Add Event
+      </button>
+    </Link>
               </div>
             </div>
           </div>
@@ -527,7 +645,7 @@ const AdminDashboard: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Attendees</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Interested</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Revenue</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Club</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -536,8 +654,8 @@ const AdminDashboard: React.FC = () => {
                   <tr key={event.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-slate-900">{event.name}</div>
-                        <div className="text-sm text-slate-500">{event.category}</div>
+                        <div className="text-sm font-medium text-slate-900">{event.title}</div>
+                        <div className="text-sm text-slate-500">{event.type?.toUpperCase()}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
@@ -548,27 +666,25 @@ const AdminDashboard: React.FC = () => {
                       })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(event.status)}`}>
-                        {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusColor(getEventStatus(event))}`}>
+                        {getEventStatus(event).charAt(0).toUpperCase() + getEventStatus(event).slice(1)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <Users className="w-4 h-4 text-slate-400 mr-2" />
-                        <span className="text-sm font-medium text-slate-900">{event.attendees.toLocaleString()}</span>
+                        <span className="text-sm font-medium text-slate-900">{(event.attendies || 0).toLocaleString()}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <Heart className="w-4 h-4 text-pink-400 mr-2" />
-                        <span className="text-sm font-medium text-slate-900">{event.interested.toLocaleString()}</span>
+                        <span className="text-sm font-medium text-slate-900">{(event.interested || 0).toLocaleString()}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <DollarSign className="w-4 h-4 text-slate-400 mr-2" />
-                        <span className="text-sm text-slate-900">${event.revenue.toLocaleString()}</span>
-                      </div>
+                      <div className="text-sm text-slate-900 font-medium">{event.clubName || 'Unknown'}</div>
+                      <div className="text-sm text-slate-500">{event.location}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
@@ -588,6 +704,21 @@ const AdminDashboard: React.FC = () => {
               </tbody>
             </table>
           </div>
+          
+          {/* Show message if no events */}
+          {events.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <div className="text-slate-400 mb-4">
+                <Calendar className="w-16 h-16 mx-auto" />
+              </div>
+              <h3 className="text-lg font-medium text-slate-900 mb-2">No events found</h3>
+              <p className="text-slate-600">Start by adding some events to your Firestore database.</p>
+              <button className="mt-4 flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm mx-auto">
+                <Plus className="w-4 h-4 mr-2" />
+                Add First Event
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

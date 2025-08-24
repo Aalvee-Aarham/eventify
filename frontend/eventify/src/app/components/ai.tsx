@@ -1,21 +1,69 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Send, X, Minimize2, MessageCircle, Sparkles, Zap, Heart } from 'lucide-react';
+import { Bot, Send, X, Minimize2, MessageCircle, Sparkles, Zap, Heart, Calendar, Users, MapPin } from 'lucide-react';
+import { model, fetchEvents } from '../firebase'; // Adjust path as needed
+
+interface Event {
+  title: string;
+  clubName: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  shortDescription: string;
+  longDescription: string;
+  eventImageUrl: string;
+  attendies: number;
+  interested: number;
+  createdAt: string;
+}
+
+interface Message {
+  id: number;
+  text: string;
+  sender: 'user' | 'bot';
+  timestamp: Date;
+}
 
 const FloatingAIAssistant: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [messages, setMessages] = useState([
-    { id: 1, text: "Hi! I'm ClubBot 🤖 How can I help you today?", sender: 'bot', timestamp: new Date() }
+  const [messages, setMessages] = useState<Message[]>([
+    { id: 1, text: "Hi! I'm ClubBot 🤖 Your AI assistant for club management. I can help you with events, club information, and more!", sender: 'bot', timestamp: new Date() }
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [robotPosition, setRobotPosition] = useState({ x: 50, y: 50 });
   const [targetPosition, setTargetPosition] = useState({ x: 50, y: 50 });
   const [isHovered, setIsHovered] = useState(false);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const robotRef = useRef<HTMLDivElement>(null);
-const animationRef = useRef<number>(0);
+  const animationRef = useRef<number>(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load events on component mount
+  useEffect(() => {
+    const loadEvents = async () => {
+      setIsLoadingEvents(true);
+      try {
+        const eventsData = await fetchEvents();
+        setEvents(eventsData);
+        console.log('Events loaded:', eventsData.length);
+      } catch (error) {
+        console.error('Error loading events:', error);
+      } finally {
+        setIsLoadingEvents(false);
+      }
+    };
+    
+    loadEvents();
+  }, []);
+
+  // Auto-scroll to bottom of messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   // Floating animation logic
   useEffect(() => {
@@ -26,17 +74,13 @@ const animationRef = useRef<number>(0);
       const windowHeight = window.innerHeight;
       const robotSize = 80;
       
-      // Generate new random position
       const newX = Math.random() * (windowWidth - robotSize - 100) + 50;
       const newY = Math.random() * (windowHeight - robotSize - 200) + 100;
       
       setTargetPosition({ x: newX, y: newY });
-      
-      // Schedule next movement
       setTimeout(moveRobot, 3000 + Math.random() * 4000);
     };
 
-    // Start floating animation
     setTimeout(moveRobot, 2000);
   }, [isOpen]);
 
@@ -58,47 +102,165 @@ const animationRef = useRef<number>(0);
     };
   }, [targetPosition]);
 
-  const handleSendMessage = () => {
+  const generateAIResponse = async (userMessage: string): Promise<string> => {
+    try {
+      // Create context with events data using the correct structure
+      const eventsContext = events.map(event => {
+        const startDate = new Date(event.startDate).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        const endDate = new Date(event.endDate).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        return `Event: "${event.title}"
+Club: ${event.clubName}
+Start: ${startDate}
+End: ${endDate}
+Location: ${event.location}
+Description: ${event.shortDescription}
+Details: ${event.longDescription}
+Attendees: ${event.attendies} registered, ${event.interested} interested
+Status: ${new Date(event.startDate) > new Date() ? 'Upcoming' : 'Past'}`;
+      }).join('\n\n');
+
+      const currentDate = new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      const prompt = `
+        You are ClubBot, an AI assistant for a university club management system called "Eventify". You are helpful, friendly, and knowledgeable about clubs and events.
+        
+        Current Date: ${currentDate}
+        
+        Available University Clubs:
+        - Photography Club: Creative space for capturing moments and storytelling through photography
+        - Cultural Club: Celebrates diversity, creativity, and tradition through art, music, dance, and drama
+        - Sports Club: Fosters teamwork, discipline, and healthy competition through various sports
+        - Robotics Club: Space for creativity, innovation, and hands-on learning in robotics and AI
+        - Programming Club: Community for students passionate about coding and technology
+        
+        Current Events Data:
+        ${eventsContext || 'No events currently available.'}
+        
+        User Question: ${userMessage}
+        
+        Instructions:
+        - Be conversational, helpful, and enthusiastic
+        - Use appropriate emojis to make responses engaging
+        - When discussing events, mention specific details like dates, locations, attendee counts
+        - If asked about upcoming events, focus on events with start dates in the future
+        - If asked about past events, mention completed events
+        - Provide registration/interest information when relevant
+        - If you don't have specific information, be honest but still helpful
+        - Keep responses concise but informative (2-4 sentences max)
+        - Use a friendly tone suitable for university students
+        - When mentioning events, include key details like date, location, and club name
+      `;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      return response.text();
+    } catch (error) {
+      console.error('Error generating AI response:', error);
+      return "I'm having trouble connecting right now, but I'm still here to help! Try asking me about our clubs or events. 🤖✨";
+    }
+  };
+
+  const handleSendMessage = async () => {
     if (!inputText.trim()) return;
 
-    const newMessage = {
-      id: messages.length + 1,
+    const newMessage: Message = {
+      id: Date.now(),
       text: inputText,
       sender: 'user',
       timestamp: new Date()
     };
 
     setMessages(prev => [...prev, newMessage]);
+    const currentInput = inputText;
     setInputText('');
     setIsTyping(true);
 
-    // Simulate bot response
-    setTimeout(() => {
-      const responses = [
-        "That's a great question! Let me help you with that 🌟",
-        "I'd love to assist you with club information! What specific club interests you? 🎯",
-        "Awesome! I can help you navigate our club management system 🚀",
-        "Perfect! Let me guide you through our features ✨",
-        "Great choice! I'm here to make your club experience amazing 💫"
-      ];
+    try {
+      const aiResponse = await generateAIResponse(currentInput);
       
-      const botResponse = {
-        id: messages.length + 2,
-        text: responses[Math.floor(Math.random() * responses.length)],
+      const botResponse: Message = {
+        id: Date.now() + 1,
+        text: aiResponse,
         sender: 'bot',
         timestamp: new Date()
       };
 
-      setIsTyping(false);
       setMessages(prev => [...prev, botResponse]);
-    }, 1500);
+    } catch (error) {
+      const errorResponse: Message = {
+        id: Date.now() + 1,
+        text: "Sorry, I encountered an error. But I'm still here to help with any club or event questions! 🤖💫",
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleQuickAction = async (actionText: string) => {
+    setInputText('');
+    
+    const newMessage: Message = {
+      id: Date.now(),
+      text: actionText,
+      sender: 'user',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, newMessage]);
+    setIsTyping(true);
+
+    try {
+      const aiResponse = await generateAIResponse(actionText);
+      
+      const botResponse: Message = {
+        id: Date.now() + 1,
+        text: aiResponse,
+        sender: 'bot',
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, botResponse]);
+    } catch (error) {
+      const errorResponse: Message = {
+        id: Date.now() + 1,
+        text: "I'm having some trouble, but I can still help you with club information! 🤖",
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const quickActions = [
-    { text: "Show me clubs", icon: "🏛️" },
-    { text: "How to join?", icon: "🤝" },
-    { text: "Events today", icon: "📅" },
-    { text: "Contact support", icon: "💬" }
+    { text: "Show upcoming events", icon: "📅" },
+    { text: "Which clubs are most active?", icon: "🏆" },
+    { text: "How do I join a club?", icon: "🤝" },
+    { text: "Events in Dhaka", icon: "📍" }
   ];
 
   return (
@@ -158,7 +320,7 @@ const animationRef = useRef<number>(0);
           {/* Speech Bubble Hint */}
           {isHovered && (
             <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-white text-gray-800 px-3 py-1 rounded-lg text-sm font-medium shadow-lg animate-bounce">
-              Chat with me! 💬
+              Ask me anything! 💬
               <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-white" />
             </div>
           )}
@@ -182,7 +344,7 @@ const animationRef = useRef<number>(0);
                   <h3 className="font-bold text-white text-lg">ClubBot AI</h3>
                   <p className="text-gray-400 text-sm flex items-center">
                     <Sparkles className="w-3 h-3 mr-1" />
-                    Always here to help
+                    {isLoadingEvents ? 'Loading events...' : `${events.length} events loaded`}
                   </p>
                 </div>
               </div>
@@ -206,7 +368,7 @@ const animationRef = useRef<number>(0);
             {!isMinimized && (
               <>
                 {/* Messages */}
-                <div className="h-80 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-purple-600 scrollbar-track-gray-800">
+                <div className="h-65 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-purple-600 scrollbar-track-gray-800">
                   {messages.map((message) => (
                     <div
                       key={message.id}
@@ -219,7 +381,10 @@ const animationRef = useRef<number>(0);
                             : 'bg-gray-800/80 text-gray-200 border border-gray-700/50'
                         }`}
                       >
-                        <p className="text-sm">{message.text}</p>
+                        <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                        <p className="text-xs opacity-70 mt-1">
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -235,6 +400,7 @@ const animationRef = useRef<number>(0);
                       </div>
                     </div>
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
 
                 {/* Quick Actions */}
@@ -244,8 +410,9 @@ const animationRef = useRef<number>(0);
                     {quickActions.map((action, index) => (
                       <button
                         key={index}
-                        onClick={() => setInputText(action.text)}
-                        className="text-xs px-3 py-1 bg-gray-800/60 hover:bg-purple-600/30 text-gray-300 hover:text-white rounded-full border border-gray-700/50 hover:border-purple-500/50 transition-all duration-200 flex items-center space-x-1"
+                        onClick={() => handleQuickAction(action.text)}
+                        disabled={isTyping}
+                        className="text-xs px-3 py-1 bg-gray-800/60 hover:bg-purple-600/30 text-gray-300 hover:text-white rounded-full border border-gray-700/50 hover:border-purple-500/50 transition-all duration-200 flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <span>{action.icon}</span>
                         <span>{action.text}</span>
@@ -261,13 +428,14 @@ const animationRef = useRef<number>(0);
                       type="text"
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                      placeholder="Type your message..."
-                      className="flex-1 bg-gray-800/80 border border-gray-700/50 rounded-xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/25 transition-all"
+                      onKeyPress={(e) => e.key === 'Enter' && !isTyping && handleSendMessage()}
+                      placeholder={isTyping ? "ClubBot is thinking..." : "Ask me anything..."}
+                      disabled={isTyping}
+                      className="flex-1 bg-gray-800/80 border border-gray-700/50 rounded-xl px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/25 transition-all disabled:opacity-50"
                     />
                     <button
                       onClick={handleSendMessage}
-                      disabled={!inputText.trim()}
+                      disabled={!inputText.trim() || isTyping}
                       className="p-2 bg-gradient-to-r from-purple-600 to-cyan-400 text-white rounded-xl hover:shadow-lg hover:shadow-purple-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105"
                     >
                       <Send className="w-5 h-5" />
