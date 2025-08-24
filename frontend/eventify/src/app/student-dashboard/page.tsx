@@ -787,7 +787,7 @@ const StudentDashboard: React.FC = () => {
         {activeTab === 'interested' && (
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-slate-900">Events You're Interested In</h2>
+              <h2 className="text-2xl font-bold text-slate-900">Events You are Interested In</h2>
               <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                 <Plus className="w-4 h-4 mr-2" />
                 Find More Events

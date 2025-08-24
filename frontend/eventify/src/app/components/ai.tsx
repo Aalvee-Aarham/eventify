@@ -48,7 +48,7 @@ const FloatingAIAssistant: React.FC = () => {
       setIsLoadingEvents(true);
       try {
         const eventsData = await fetchEvents();
-        setEvents(eventsData);
+        setEvents(eventsData); 
         console.log('Events loaded:', eventsData.length);
       } catch (error) {
         console.error('Error loading events:', error);

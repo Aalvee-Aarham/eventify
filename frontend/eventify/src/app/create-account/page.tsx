@@ -1,44 +1,42 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth, googleProvider } from '../firebase';
 import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword, browserLocalPersistence } from 'firebase/auth';
 import { toast, ToastContainer } from 'react-toastify';
 import { db } from '../firebase'; // Import Firestore instance
 import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore'; // Use full Firestore functions
-import { useRouter } from 'next/router'; // Import useRouter for navigation
+import { useRouter } from 'next/navigation'; // For Next.js 13 and onwards (use next/navigation instead of useRouter)
 
 const CreateAccount: React.FC = () => {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const router = useRouter(); // Initialize useRouter
+  
+  const router = useRouter(); // Ensure you are using the correct import for the Next.js version you are using
 
   // Sign up with Email and Password
   const handleEmailPasswordSignup = async () => {
     setIsLoading(true);
     try {
-      // Create user with Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Add user details to Firestore with default role "none"
-      const userDocRef = doc(db, 'users', user.uid); // Reference to the user's document in Firestore
+      const userDocRef = doc(db, 'users', user.uid); 
       await setDoc(userDocRef, {
-        name: '', // You can add the name later if required
+        name: '',
         email: user.email,
         accountCreationDate: Timestamp.now(),
-        role: 'none', // Default role
-        interest: [], // Default empty interests
+        role: 'none', 
+        interest: [],
       });
 
-      // Save user info to localStorage
       localStorage.setItem('user', JSON.stringify(user));
 
       toast.success('Account created successfully!');
       
-      // Navigate to /registration after successful account creation
-      router.push('/registration'); // Add this line for navigation
+      // Navigate using useRouter (client-side navigation)
+      router.push('/registration');
     } catch (error: any) {
       toast.error(`Error: ${error.message}`);
     } finally {
@@ -51,14 +49,12 @@ const CreateAccount: React.FC = () => {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // Save user info to localStorage after login
       const user = auth.currentUser;
       if (user) {
         localStorage.setItem('user', JSON.stringify(user));
         toast.success('Logged in successfully!');
         
-        // Navigate to /registration after successful login
-        router.push('/registration'); // Add this line for navigation
+        router.push('/registration');
       }
     } catch (error: any) {
       toast.error(`Error: ${error.message}`);
@@ -71,35 +67,28 @@ const CreateAccount: React.FC = () => {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      // Set persistence to localStorage before signing in with Google
-      await auth.setPersistence(browserLocalPersistence); // Ensure persistence is set to browserLocalPersistence
+      await auth.setPersistence(browserLocalPersistence); 
     
-      // Sign in with Google
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
 
-      // Save user info to localStorage
       localStorage.setItem('user', JSON.stringify(user));
 
-      // Add user details to Firestore with default role "none"
-      const userDocRef = doc(db, 'users', user.uid); // Reference to the user's document in Firestore
+      const userDocRef = doc(db, 'users', user.uid); 
       const userSnapshot = await getDoc(userDocRef);
 
       if (!userSnapshot.exists()) {
-        // Only add the user details to Firestore if it's a new user
         await setDoc(userDocRef, {
-          name: user.displayName || '', // Use display name from Google or leave empty
+          name: user.displayName || '',
           email: user.email,
           accountCreationDate: Timestamp.now(),
-          role: 'none', // Default role
-          interest: [], // Default empty interests
+          role: 'none',
+          interest: [],
         });
       }
 
       toast.success('Google Sign-In successful!');
-      
-      // Navigate to /registration after successful Google login
-      router.push('/registration'); // Add this line for navigation
+      router.push('/registration');
     } catch (error: any) {
       toast.error(`Error: ${error.message}`);
     } finally {
@@ -144,7 +133,7 @@ const CreateAccount: React.FC = () => {
         <div className="text-center text-gray-600 mt-4">
           <span>Already have an account? </span>
           <br />
-            <a
+          <a
             href="/log-in"
             className="text-blue-500 font-semibold hover:underline"
             tabIndex={isLoading ? -1 : 0}
@@ -152,9 +141,9 @@ const CreateAccount: React.FC = () => {
             onClick={e => {
               if (isLoading) e.preventDefault();
             }}
-            >
+          >
             Login here
-            </a>
+          </a>
         </div>
       </div>
       <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} />

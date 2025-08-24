@@ -46,7 +46,7 @@ const EventDetailsPage = () => {
       }
     };
     fetchEventData();
-  }, []);
+  }, [eventId]);
 
   // Check if user already registered/interested
   useEffect(() => {
