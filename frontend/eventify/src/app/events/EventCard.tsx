@@ -5,6 +5,7 @@ import { FaMapMarkerAlt, FaCalendarAlt, FaUserCircle, FaUsers } from 'react-icon
 import { motion } from 'framer-motion';
 
 interface EventCardProps {
+id: string;
   title: string;
   shortDescription: string;
   location: string;
@@ -17,6 +18,7 @@ interface EventCardProps {
 }
 
 const EventCard: React.FC<EventCardProps> = ({
+    id,
   title,
   shortDescription,
   location,

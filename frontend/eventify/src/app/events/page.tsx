@@ -93,22 +93,7 @@ const EventPage = () => {
               </div>
             </div>
 
-            {/* Category Filter Pills */}
-            <div className="flex gap-4">
-              {["all", "iapc", "cultural", "sports", "idc", "cdc"].map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedType(category)}
-                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
-                    selectedType === category
-                      ? "bg-blue-500 text-white shadow-lg"
-                      : "bg-white/10 text-slate-300 hover:bg-white/20 hover:text-white"
-                  }`}
-                >
-                  {category === "all" ? "All Events" : category.toUpperCase()}
-                </button>
-              ))}
-            </div>
+
           </div>
         </div>
 
@@ -125,18 +110,23 @@ const EventPage = () => {
             })
             .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
             .map((event) => (
-              <EventCard
-                key={event.id}
-                title={event.title}
-                shortDescription={event.description}
-                location={event.location}
-                startDate={event.date}
-                endDate={event.endDate}
-                eventImageUrl={event.eventImageUrl}
-                interested={event.interested}  // Fetch dynamic "interested" from Firestore
-                attendees={event.attendies}  // Fetch dynamic "attendees" from Firestore
-                clubName={event.clubName}    // Fetch dynamic "clubName" from Firestore
-              />
+    <Link key={event.id} href={`/event-details/${event.id}`} passHref>
+      <div>
+        <EventCard
+          key={event.id}
+          id={event.id}               
+          title={event.title}
+          shortDescription={event.description}
+          location={event.location}
+          startDate={event.date}
+          endDate={event.endDate}
+          eventImageUrl={event.eventImageUrl}
+          interested={event.interested}
+          attendees={event.attendees}
+          clubName={event.clubName}
+        />
+      </div>
+    </Link>
             ))}
         </div>
 

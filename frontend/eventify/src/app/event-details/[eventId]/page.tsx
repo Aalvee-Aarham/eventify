@@ -1,28 +1,30 @@
 'use client';
 import React, { useEffect, useState, useRef } from 'react';
 import { Calendar, MapPin, Clock, Users, Heart, ChevronDown, Star, Share2, Bookmark, User, X, LogIn, UserPlus, Sparkles, Check } from 'lucide-react';
-import Navbar from '../components/Navbar';
-import { auth, db } from '../firebase'; // Import auth here
+import Navbar from '../../components/Navbar';
+import { auth, db } from '../../firebase'; // Import auth here
 import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, increment } from 'firebase/firestore'; // Import Firestore functions
 import { onAuthStateChanged } from 'firebase/auth';
 import { toast } from 'react-hot-toast';
+import { useParams } from 'next/navigation';
 
-const EVENT_ID = "IxVCFZ4tiOvug0eLzQEs"; // Replace with your actual event ID
 
 const EventDetailsPage = () => {
+  // Get the eventId from the URL
   const [user, setUser] = useState<any>(null); // Add user state
   const [eventData, setEventData] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
-
+  
   const heroRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const descriptionRef = useRef<HTMLDivElement>(null);
   const locationRef = useRef<HTMLDivElement>(null);
   const organizerRef = useRef<HTMLDivElement>(null);
-
+  const { eventId } = useParams();
+  
   // Listen for auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -34,7 +36,7 @@ const EventDetailsPage = () => {
   // Fetch event data from Firestore
   useEffect(() => {
     const fetchEventData = async () => {
-      const docRef = doc(db, "events", EVENT_ID);
+      const docRef = doc(db, "events", eventId as string);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setEventData(docSnap.data());
@@ -60,11 +62,11 @@ const EventDetailsPage = () => {
         const data = userSnap.data();
         setIsRegistered(
           Array.isArray(data.registeredEvents) &&
-          data.registeredEvents.some((e: any) => e.id === EVENT_ID)
+          data.registeredEvents.some((e: any) => e.id === eventId)
         );
         setIsInterested(
           Array.isArray(data.interestedEvents) &&
-          data.interestedEvents.some((e: any) => e.id === EVENT_ID)
+          data.interestedEvents.some((e: any) => e.id === eventId)
         );
       }
     };
@@ -131,10 +133,10 @@ const EventDetailsPage = () => {
       return;
     }
     setLoading(true);
-    const eventRef = doc(db, "events", EVENT_ID);
+    const eventRef = doc(db, "events", eventId as string);
     const userRef = doc(db, "users", user.uid);
     const eventObj = {
-      id: EVENT_ID,
+      id: eventId,
       startDate: eventData.startDate,
       endDate: eventData.endDate,
     };
@@ -163,10 +165,10 @@ const EventDetailsPage = () => {
       return;
     }
     setLoading(true);
-    const eventRef = doc(db, "events", EVENT_ID);
+    const eventRef = doc(db, "events", eventId as string);
     const userRef = doc(db, "users", user.uid);
     const eventObj = {
-      id: EVENT_ID,
+      id: eventId,
       startDate: eventData.startDate,
       endDate: eventData.endDate,
     };
@@ -383,10 +385,7 @@ const EventDetailsPage = () => {
                   {isInterested ? 'Interested' : 'Show Interest'}
                 </button>
 
-                <button className="w-full py-3 px-8 rounded-xl bg-white/5 border border-white/20 text-white font-semibold hover:bg-white/10 transition-all duration-300 hover:scale-105 flex items-center justify-center gap-3">
-                  <Bookmark className="w-5 h-5" />
-                  Save Event
-                </button>
+
               </div>
 
               {/* Related Events */}
